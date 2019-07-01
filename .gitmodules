@@ -1,0 +1,3 @@
+[submodule "PySEAL"]
+	path = PySEAL
+	url = https://github.com/Lab41/PySEAL.git
