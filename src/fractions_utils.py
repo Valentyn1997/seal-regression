@@ -19,7 +19,7 @@ from seal import ChooserEvaluator, \
     ChooserPoly
 
 
-class Fractionals_utils():
+class Fractionals_utils:
     def __init__(self):
         self.params = EncryptionParameters()
         self.params.set_poly_modulus("1x^2048 + 1")
