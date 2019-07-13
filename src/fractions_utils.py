@@ -125,3 +125,7 @@ class Fractionals_utils():
         """
         self.evaluator.add(a, b)
         return a
+       
+    def multiply(self, a, b):
+        self.evaluator.multiply(a, b)
+        return a
