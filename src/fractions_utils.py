@@ -21,8 +21,6 @@ from seal import ChooserEvaluator, \
 
 class Fractionals_utils():
     def __init__(self):
-        super(Fractionals_utils, self).__init__()
-
         self.params = EncryptionParameters()
         self.params.set_poly_modulus("1x^2048 + 1")
         self.params.set_coeff_modulus(seal.coeff_modulus_128(2048))
