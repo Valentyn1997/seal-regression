@@ -116,3 +116,12 @@ class Fractionals_utils():
         encrypted = Ciphertext()
         self.encryptor.encrypt(plain, encrypted)
         return encrypted
+
+    def add(self, a, b):
+        """
+        :param a: encrypted fractional value
+        :param b: encrypted fractional value
+        :return: sum
+        """
+        self.evaluator.add(a, b)
+        return a
