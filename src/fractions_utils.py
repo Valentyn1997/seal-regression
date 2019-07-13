@@ -100,7 +100,7 @@ class Fractionals_utils():
 
         return encrypted_result
 
-    def enc_substract(self, a, b):
+    def substract(self, a, b):
         """
         :param a: encrypted fractional value
         :param b: encrypted fractional value
