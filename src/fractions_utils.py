@@ -19,6 +19,7 @@ from seal import ChooserEvaluator, \
     ChooserPoly
 
 
+
 class Fractionals_utils:
     def __init__(self):
         self.params = EncryptionParameters()
@@ -127,3 +128,15 @@ class Fractionals_utils:
     def multiply(self, a, b):
         self.evaluator.multiply(a, b)
         return a
+
+    def array(self, arr):
+        n = len(arr)
+        m = len(arr[0])
+        enc_arr = [[0 for x in range(n)] for y in range(m)]
+
+        for i in range(n):
+            for j in range(m):
+                enc_arr[n][m] = self.encrypt_num(arr[n][m])
+        
+
+
