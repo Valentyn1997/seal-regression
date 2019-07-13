@@ -13,3 +13,8 @@ docker run -it -p 8888:8888 seal-save bash
 root@4bb63b8f3776:/SEAL# jupyter notebook --ip 0.0.0.0 --no-browser --allow-root 
 ```
 
+### Running python file
+
+```
+docker run -it seal-save python3 example.py
+```
