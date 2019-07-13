@@ -19,16 +19,16 @@ from seal import ChooserEvaluator, \
     ChooserPoly
 
 
-class Fractions_utils():
+class Fractionals_utils():
     def __init__(self):
-        super(Fractions_utils, self).__init__()
+        super(Fractionals_utils, self).__init__()
 
-        self.parms = EncryptionParameters()
-        self.parms.set_poly_modulus("1x^2048 + 1")
-        self.parms.set_coeff_modulus(seal.coeff_modulus_128(2048))
-        self.parms.set_plain_modulus(1 << 8)
+        self.params = EncryptionParameters()
+        self.params.set_poly_modulus("1x^2048 + 1")
+        self.params.set_coeff_modulus(seal.coeff_modulus_128(2048))
+        self.params.set_plain_modulus(1 << 8)
 
-        self.context = SEALContext(self.parms)
+        self.context = SEALContext(self.params)
         self.print_parameters(self.context)
 
         self.keygen = KeyGenerator(self.context)
@@ -53,59 +53,66 @@ class Fractions_utils():
         print("| plain_modulus: " + (str)(context.plain_modulus().value()))
         print("| noise_standard_deviation: " + (str)(context.noise_standard_deviation()))
 
-    def encode_rationals(self, numbers, encoder):
+    def encode_rationals(self, numbers):
         # encoding without encryption
         encoded_coefficients = []
         for i in range(len(numbers)):
-            encoded_coefficients.append(encoder.encode(numbers[i]))
+            encoded_coefficients.append(self.encoder.encode(numbers[i]))
         return encoded_coefficients
 
-    def encode_num(self, num, encoder):
+    def encode_num(self, num):
         # encoding without encryption
-        return encoder.encode(num)
+        return self.encoder.encode(num)
 
-    def sum_enc_array(self, array, evaluator):
+    def sum_enc_array(self, array):
         encrypted_result = Ciphertext()
-        evaluator.add_many(array, encrypted_result)
+        self.evaluator.add_many(array, encrypted_result)
         return encrypted_result
 
-    def decode(self, encrypted_res, decryptor, encoder):
+    def decode(self, encrypted_res):
         plain_result = Plaintext()
-        decryptor.decrypt(encrypted_res, plain_result)
-        result = encoder.decode(plain_result)
+        self.decryptor.decrypt(encrypted_res, plain_result)
+        result = self.encoder.decode(plain_result)
         return result
 
-    def encrypt_rationals(self, rational_numbers, encryptor, encoder, parms):
-        # encrypt array of rational numbers
+    def encrypt_rationals(self, rational_numbers):
+        """
+        :param rational_numbers: array of rational numbers
+        :return: encrypted result
+        """
         encrypted_rationals = []
         for i in range(len(rational_numbers)):
-            encrypted_rationals.append(Ciphertext(parms))
-            encryptor.encrypt(encoder.encode(rational_numbers[i]), encrypted_rationals[i])
+            encrypted_rationals.append(Ciphertext(self.params))
+            self.encryptor.encrypt(self.encoder.encode(rational_numbers[i]), encrypted_rationals[i])
         return encrypted_rationals
 
-    def weighted_average(self, encrypted_rationals, encoded_coefficients, encoded_divide_by, evaluator, decryptor):
+    def weighted_average(self, encrypted_rationals, encoded_coefficients, encoded_divide_by):
 
         for i in range(len(encrypted_rationals)):
-            evaluator.multiply_plain(encrypted_rationals[i], encoded_coefficients[i])
+            self.evaluator.multiply_plain(encrypted_rationals[i], encoded_coefficients[i])
 
         encrypted_result = Ciphertext()
-        evaluator.add_many(encrypted_rationals, encrypted_result)
-        evaluator.multiply_plain(encrypted_result, encoded_divide_by)
+        self.evaluator.add_many(encrypted_rationals, encrypted_result)
+        self.evaluator.multiply_plain(encrypted_result, encoded_divide_by)
 
         # How much noise budget do we have left?
-        print("Noise budget in result: " + (str)(decryptor.invariant_noise_budget(encrypted_result)) + " bits")
+        print("Noise budget in result: " + (str)(self.decryptor.invariant_noise_budget(encrypted_result)) + " bits")
 
         return encrypted_result
 
-    def enc_substract(self, a, b, encoder, evaluator):
-        # a and b should be encrypted
-        minus_sign = encoder.encode(-1)
-        evaluator.multiply_plain(b, minus_sign)
-        evaluator.add(a, b)
+    def enc_substract(self, a, b):
+        """
+        :param a: encrypted fractional value
+        :param b: encrypted fractional value
+        :return: substracted result
+        """
+        minus_sign = self.encoder.encode(-1)
+        self.evaluator.multiply_plain(b, minus_sign)
+        self.evaluator.add(a, b)
         return a
 
-    def encrypt_num(self, value, encoder, encryptor):
-        plain = encoder.encode(value)
+    def encrypt_num(self, value):
+        plain = self.encoder.encode(value)
         encrypted = Ciphertext()
-        encryptor.encrypt(plain, encrypted)
+        self.encryptor.encrypt(plain, encrypted)
         return encrypted
