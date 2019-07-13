@@ -1,4 +1,4 @@
-# seal_k-means
+# seal_regression
 
 ### Setting up Docker image for PySEAL
 ```
