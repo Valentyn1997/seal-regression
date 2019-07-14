@@ -38,10 +38,14 @@ class EncArray:
 
     def __mul__(self, o):
         # elementwise
+        if not self._is_dim_equal(o):
+            return
         self._recur_apply(self.enc_arr, o.get_array(), fun=self.utils.multiply)
         return self.enc_arr
 
     def __add__(self, o):
+        if not self._is_dim_equal(o):
+            return
         self._recur_apply(self.enc_arr, o.get_array(), fun=self.utils.add)
         return self.enc_arr
 
@@ -49,15 +53,32 @@ class EncArray:
         return self.enc_arr
 
     def __sub__(self, o):
+        if not self._is_dim_equal(o):
+            return
         self._recur_apply(self.enc_arr, o.get_array(), fun=self.utils.substract)
         return self.enc_arr
 
     def _is_dim_equal(self, o):
-        n, m = self.__len__()
-        if n == self.shape[0] and m == self.shape[1]:
-            return True
+        n = self.shape[0]
+        if len(self.shape) > 1:
+            m = self.shape[1]
+            if n == o.shape[0] and m == o.shape[1]:
+                return True
+        else:
+            if n == o.shape[0]:
+                return True
         print("Dimensions are not equal!")
         return False
 
-    def __len__(self):
-        return self.shape
+
+futils = Fractionals_utils()
+a = EncArray([[10, 11, 12], [13, 14, 15]], futils)
+b = EncArray([[10, 10, 10], [10, 10, 10]], futils)
+a1 = EncArray([10, 11, 12], futils)
+b1 = EncArray([13.3, 34, 12], futils)
+
+c = a1 + b1
+d = a * b
+
+print(futils.decode(c[0]))
+print(futils.decode(d[0][0]))
