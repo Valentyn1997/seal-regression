@@ -62,10 +62,11 @@ context = FracContext()
 encode_utils = FractionalEncoderUtils(context)
 decode_utils = FractionalDecoderUtils(context)
 
-a = EncArray([[1, 2, -1, 2, 4, -1]], encode_utils).T
-X, y = ARMA.create_design_matrix(a, lag=2)
+a = EncArray([[1, 2, -1, 2, 4, -1, 1, 3, -.5, 0, 2, -1.7]], encode_utils).T
+X, y = ARMA.create_design_matrix(a, lag=1)
 
-model = Linear_Regression(decode_utils, encode_utils, n_iter=10)
+model = Linear_Regression(decode_utils, encode_utils, n_iter=30)
 model.fit_unencrypted(X.decrypt_array(decode_utils), y.decrypt_array(decode_utils))
+print(f'Estimated result: {model.weigths}')
 model.fit(X, y, decode_utils)
 print(f'Estimated result: {model.weigths.decrypt_array(decode_utils)}')
