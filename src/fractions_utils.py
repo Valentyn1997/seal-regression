@@ -24,7 +24,6 @@ class FracContext:
         self.keygen = KeyGenerator(self.context)
         self.public_key = self.keygen.public_key()
         self.secret_key = self.keygen.secret_key()
-
         self.evaluator = Evaluator(self.context)
 
     def print_parameters(self, context):
@@ -46,10 +45,10 @@ class FractionalDecoderUtils:
         self.encoder = FractionalEncoder(self.context.plain_modulus(),
                                          self.context.poly_modulus(),
                                          64, 32, 3)
+        self.evaluator = context.evaluator
 
     def decode(self, encrypted_res):
         plain_result = Plaintext()
-
         self.decryptor.decrypt(encrypted_res, plain_result)
         result = self.encoder.decode(plain_result)
         return result
@@ -63,6 +62,7 @@ class FractionalEncoderUtils:
         self.encoder = FractionalEncoder(self.context.plain_modulus(),
                                          self.context.poly_modulus(),
                                          64, 32, 3)
+        self.evaluator = context.evaluator
 
     def encode_rationals(self, numbers):
         # encoding without encryption
@@ -87,7 +87,7 @@ class FractionalEncoderUtils:
         """
         encrypted_rationals = []
         for i in range(len(rational_numbers)):
-            encrypted_rationals.append(Ciphertext(self.params))
+            encrypted_rationals.append(Ciphertext(self.context.params))
             self.encryptor.encrypt(self.encoder.encode(rational_numbers[i]), encrypted_rationals[i])
         return encrypted_rationals
 
@@ -99,9 +99,6 @@ class FractionalEncoderUtils:
         encrypted_result = Ciphertext()
         self.evaluator.add_many(encrypted_rationals, encrypted_result)
         self.evaluator.multiply_plain(encrypted_result, encoded_divide_by)
-
-        # How much noise budget do we have left?
-        print("Noise budget in result: " + (str)(self.decryptor.invariant_noise_budget(encrypted_result)) + " bits")
 
         return encrypted_result
 
