@@ -4,13 +4,14 @@ from copy import deepcopy
 
 
 class EncArray:
-    def __init__(self, arr, enc_utils, is_encrypted=False):
+    def __init__(self, arr, enc_utils: FractionalEncoderUtils, is_encrypted=False):
         self.enc_utils = enc_utils
         self.shape = np.shape(arr)
+        self.ndim = len(self.shape)
         if not is_encrypted:
             self.enc_arr = self._recur_apply(arr, fun=self.enc_utils.encrypt_num)
         else:
-            self.enc_arr = arr
+            self.enc_arr = deepcopy(arr)
 
     @staticmethod
     def _recur_apply(arr1, arr2=None, fun=None, result=None):
@@ -46,21 +47,27 @@ class EncArray:
         return EncArray(self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.substract),
                         enc_utils=self.enc_utils, is_encrypted=True)
 
-    # TODO  For every shape
     def _is_dim_equal(self, o):
-        n = self.shape[0]
-        if len(self.shape) > 1:
-            m = self.shape[1]
-            if n == o.shape[0] and m == o.shape[1]:
-                return True
-        else:
-            if n == o.shape[0]:
-                return True
+        if np.array_equal(self.shape, o.shape):
+            return True
         print("Dimensions are not equal!")
         return False
 
-    def decode_array(self, decode_utils):
+    def decrypt_array(self, decode_utils: FractionalDecoderUtils):
         return self._recur_apply(self.enc_arr, fun=decode_utils.decode)
+
+    def __len__(self):
+        return len(self.enc_arr)
+
+    @property
+    def T(self):
+        if self.ndim != 1:
+            return EncArray(list(map(list, zip(*self.enc_arr))), enc_utils=self.enc_utils, is_encrypted=True)
+        else:
+            return self
+
+    def __getitem__(self, item):
+        return EncArray(self.enc_arr[item], enc_utils=self.enc_utils, is_encrypted=True)
 
 
 # Simple usage
@@ -78,6 +85,8 @@ b2 = EncArray([13.3, 34, 12], encode_utils)
 c = a1 + b1
 d = a * b
 f = a2 - b2
-print(c.decode_array(decode_utils))
-print(a1.decode_array(decode_utils))
-print(b1.decode_array(decode_utils))
+print(c.decrypt_array(decode_utils))
+print(a1.decrypt_array(decode_utils))
+print(b1.decrypt_array(decode_utils))
+
+print(a1[0])
