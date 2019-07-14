@@ -1,63 +1,83 @@
-from src.fractions_utils import Fractionals_utils
+from src.fractions_utils import FractionalEncoderUtils, FracContext, FractionalDecoderUtils
 import numpy as np
 from copy import deepcopy
 
 
 class EncArray:
-    def __init__(self, arr, futils):
-        self.utils = futils
+    def __init__(self, arr, enc_utils, is_encrypted=False):
+        self.enc_utils = enc_utils
         self.shape = np.shape(arr)
-        self.enc_arr = deepcopy(arr)
-        self._recur_apply(arr, fun=self.utils.encrypt_num)
+        if not is_encrypted:
+            self.enc_arr = self._recur_apply(arr, fun=self.enc_utils.encrypt_num)
+        else:
+            self.enc_arr = arr
 
-    def _recur_apply(self, *args, fun, cnt=0):
+    @staticmethod
+    def _recur_apply(arr1, arr2=None, fun=None, result=None):
+        if result is None:
+            arr1 = deepcopy(arr1)
+            arr2 = deepcopy(arr2)
+            result = deepcopy(arr1)
 
-        arr = args[0]
-        arr2 = None
-        if len(args) == 2:
-            arr2 = args[1]
-
-        for i in range(len(arr)):
-            if type(arr[i]) == list:
-                if arr2 is not None:
-                    self._recur_apply(arr[i], arr2, fun=fun, cnt=cnt)
-                else:
-                    self._recur_apply(arr[i], fun=fun, cnt=cnt)
-                cnt += 1
-            else:
-                if len(self.shape) == 1:
-                    if arr2 is not None:
-                        self.enc_arr[i] = fun(arr[i], arr2[i])
-                    else:
-                        self.enc_arr[i] = fun(arr[i])
-                else:
-                    if arr2 is not None:
-                        self.enc_arr[cnt][i] = fun(arr[i], arr2[cnt][i])
-                    else:
-                        self.enc_arr[cnt][i] = fun(arr[i])
+        if type(arr1) != list:
+            return fun(arr1, arr2) if arr2 is not None else fun(arr1)
+        else:
+            result = [EncArray._recur_apply(arr1[i], arr2[i], fun=fun, result=result[i]) if arr2 is not None
+                      else EncArray._recur_apply(arr1[i], fun=fun, result=result[i])
+                      for i in range(len(arr1))]
+            return result
 
     def __mul__(self, o):
         # elementwise
-        self._recur_apply(self.enc_arr, o.get_array(), fun=self.utils.multiply)
-        return self.enc_arr
+        if not self._is_dim_equal(o):
+            return None
+        return EncArray(self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.multiply),
+                        enc_utils=self.enc_utils, is_encrypted=True)
 
     def __add__(self, o):
-        self._recur_apply(self.enc_arr, o.get_array(), fun=self.utils.add)
-        return self.enc_arr
-
-    def get_array(self):
-        return self.enc_arr
+        if not self._is_dim_equal(o):
+            return None
+        return EncArray(self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.add),
+                        enc_utils=self.enc_utils, is_encrypted=True)
 
     def __sub__(self, o):
-        self._recur_apply(self.enc_arr, o.get_array(), fun=self.utils.substract)
-        return self.enc_arr
+        if not self._is_dim_equal(o):
+            return None
+        return EncArray(self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.substract),
+                        enc_utils=self.enc_utils, is_encrypted=True)
 
+    # TODO  For every shape
     def _is_dim_equal(self, o):
-        n, m = self.__len__()
-        if n == self.shape[0] and m == self.shape[1]:
-            return True
+        n = self.shape[0]
+        if len(self.shape) > 1:
+            m = self.shape[1]
+            if n == o.shape[0] and m == o.shape[1]:
+                return True
+        else:
+            if n == o.shape[0]:
+                return True
         print("Dimensions are not equal!")
         return False
 
-    def __len__(self):
-        return self.shape
+    def decode_array(self, decode_utils):
+        return self._recur_apply(self.enc_arr, fun=decode_utils.decode)
+
+
+# Simple usage
+context = FracContext()
+encode_utils = FractionalEncoderUtils(context)
+decode_utils = FractionalDecoderUtils(context)
+
+a = EncArray([[10, 11, 12], [13, 14, 15]], encode_utils)
+b = EncArray([[10, 10, 10], [10, 10, 10]], encode_utils)
+a1 = EncArray([10, 11, 12], encode_utils)
+b1 = EncArray([13.3, 34, 12], encode_utils)
+a2 = EncArray([10, 11, 12], encode_utils)
+b2 = EncArray([13.3, 34, 12], encode_utils)
+
+c = a1 + b1
+d = a * b
+f = a2 - b2
+print(c.decode_array(decode_utils))
+print(a1.decode_array(decode_utils))
+print(b1.decode_array(decode_utils))
