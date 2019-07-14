@@ -31,24 +31,28 @@ class Linear_Regression:
             print(f'Iteration: {it}. Gradient: {gradient}')
 
             self.weigths = self.weigths - coef * gradient
-        print(f'Real result: {(np.linalg.inv(X.T@X) @X.T @ y).T}')
+        print(f'Real result: {((X.T@X) @X.T @ y).T}')
 
     def fit(self, X: EncArray, y: EncArray, decode_utils: FractionalDecoderUtils):
-        self.weigths = EncArray(X.shape[1] * [0.0], enc_utils=self.encode_utils)
-        coef = EncArray(X.shape[1] * [self.lr / X.shape[0]], enc_utils=self.encode_utils)
+        result = (X.T @ X)@X.T@y
+        self.print_noise(decode_utils.decryptor, result[0].enc_arr)
+        self.weigths = result
 
-        for it in (range(self.n_iter)):
-            gradient = []
-            for j in range(X.shape[1]):
-                loss = []
-                for i in range(X.shape[0]):
-                    loss.append(((self.weigths * X[i]).sum() - y[i][0]).enc_arr)
-                loss = EncArray(loss, enc_utils=self.encode_utils, is_encrypted=True)
-                gradient.append((loss * X.T[j]).sum().enc_arr)
-            gradient = EncArray(gradient, enc_utils=self.encode_utils, is_encrypted=True)
-            self.print_noise(decode_utils.decryptor, gradient.enc_arr)
-            print(f'Iteration: {it}. Gradient: {gradient.decrypt_array(decode_utils)}')
-            self.weigths = self.weigths - coef * gradient
+        # self.weigths = EncArray(X.shape[1] * [0.0], enc_utils=self.encode_utils)
+        # coef = EncArray(X.shape[1] * [self.lr / X.shape[0]], enc_utils=self.encode_utils)
+        #
+        # for it in (range(self.n_iter)):
+        #     gradient = []
+        #     for j in range(X.shape[1]):
+        #         loss = []
+        #         for i in range(X.shape[0]):
+        #             loss.append(((self.weigths * X[i]).sum() - y[i][0]).enc_arr)
+        #         loss = EncArray(loss, enc_utils=self.encode_utils, is_encrypted=True)
+        #         gradient.append((loss * X.T[j]).sum().enc_arr)
+        #     gradient = EncArray(gradient, enc_utils=self.encode_utils, is_encrypted=True)
+        #     self.print_noise(decode_utils.decryptor, gradient.enc_arr)
+        #     print(f'Iteration: {it}. Gradient: {gradient.decrypt_array(decode_utils)}')
+        #     self.weigths = self.weigths - coef * gradient
 
 
     def predict(self, X):
@@ -63,7 +67,7 @@ encode_utils = FractionalEncoderUtils(context)
 decode_utils = FractionalDecoderUtils(context)
 
 a = EncArray([[1, 2, -1, 2, 4, -1, 1, 3, -.5, 0, 2, -1.7]], encode_utils).T
-X, y = ARMA.create_design_matrix(a, lag=1)
+X, y = ARMA.create_design_matrix(a, lag=4)
 
 model = Linear_Regression(decode_utils, encode_utils, n_iter=30)
 model.fit_unencrypted(X.decrypt_array(decode_utils), y.decrypt_array(decode_utils))
