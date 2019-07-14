@@ -5,22 +5,13 @@ from seal import ChooserEvaluator, \
     Encryptor, \
     EncryptionParameters, \
     Evaluator, \
-    IntegerEncoder, \
     FractionalEncoder, \
     KeyGenerator, \
-    MemoryPoolHandle, \
     Plaintext, \
-    SEALContext, \
-    EvaluationKeys, \
-    GaloisKeys, \
-    PolyCRTBuilder, \
-    ChooserEncoder, \
-    ChooserEvaluator, \
-    ChooserPoly
+    SEALContext
 
 
-
-class Fractionals_utils:
+class FracContext:
     def __init__(self):
         self.params = EncryptionParameters()
         self.params.set_poly_modulus("1x^2048 + 1")
@@ -34,13 +25,7 @@ class Fractionals_utils:
         self.public_key = self.keygen.public_key()
         self.secret_key = self.keygen.secret_key()
 
-        self.encryptor = Encryptor(self.context, self.public_key)
         self.evaluator = Evaluator(self.context)
-        self.decryptor = Decryptor(self.context, self.secret_key)
-
-        self.encoder = FractionalEncoder(self.context.plain_modulus(),
-                                         self.context.poly_modulus(),
-                                         64, 32, 3)
 
     def print_parameters(self, context):
         print("/ Encryption parameters:")
@@ -51,6 +36,33 @@ class Fractionals_utils:
 
         print("| plain_modulus: " + (str)(context.plain_modulus().value()))
         print("| noise_standard_deviation: " + (str)(context.noise_standard_deviation()))
+
+
+class FractionalDecoderUtils:
+    def __init__(self, context):
+        self.context = context.context
+        self.secret_key = context.secret_key
+        self.decryptor = Decryptor(self.context, self.secret_key)
+        self.encoder = FractionalEncoder(self.context.plain_modulus(),
+                                         self.context.poly_modulus(),
+                                         64, 32, 3)
+
+    def decode(self, encrypted_res):
+        plain_result = Plaintext()
+
+        self.decryptor.decrypt(encrypted_res, plain_result)
+        result = self.encoder.decode(plain_result)
+        return result
+
+
+class FractionalEncoderUtils:
+    def __init__(self, context):
+        self.context = context.context
+        self.public_key = context.public_key
+        self.encryptor = Encryptor(self.context, self.public_key)
+        self.encoder = FractionalEncoder(self.context.plain_modulus(),
+                                         self.context.poly_modulus(),
+                                         64, 32, 3)
 
     def encode_rationals(self, numbers):
         # encoding without encryption
@@ -67,12 +79,6 @@ class Fractionals_utils:
         encrypted_result = Ciphertext()
         self.evaluator.add_many(array, encrypted_result)
         return encrypted_result
-
-    def decode(self, encrypted_res):
-        plain_result = Plaintext()
-        self.decryptor.decrypt(encrypted_res, plain_result)
-        result = self.encoder.decode(plain_result)
-        return result
 
     def encrypt_rationals(self, rational_numbers):
         """
@@ -124,19 +130,7 @@ class Fractionals_utils:
         """
         self.evaluator.add(a, b)
         return a
-       
+
     def multiply(self, a, b):
         self.evaluator.multiply(a, b)
         return a
-
-    def array(self, arr):
-        n = len(arr)
-        m = len(arr[0])
-        enc_arr = [[0 for x in range(n)] for y in range(m)]
-
-        for i in range(n):
-            for j in range(m):
-                enc_arr[n][m] = self.encrypt_num(arr[n][m])
-        
-
-
