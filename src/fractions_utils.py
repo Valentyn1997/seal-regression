@@ -14,9 +14,31 @@ from seal import ChooserEvaluator, \
 class FracContext:
     def __init__(self):
         self.params = EncryptionParameters()
-        self.params.set_poly_modulus("1x^2048 + 1")
-        self.params.set_coeff_modulus(seal.coeff_modulus_128(2048))
-        self.params.set_plain_modulus(1 << 8)
+        self.params.set_poly_modulus("1x^1024 + 1")
+        primes = [
+            0xffffffffffc0001,  0xfffffffff840001,  0xfffffffff240001,  0xffffffffe7c0001,
+            0xffffffffe740001,  0xffffffffe4c0001,  0xffffffffe440001,  0xffffffffe400001,
+            0xffffffffdbc0001,  0xffffffffd840001,  0xffffffffd680001,  0xffffffffd000001,
+            # 0xffffffffcf00001,  0xffffffffcdc0001,  0xffffffffcc40001,  0xffffffffc300001,
+            # 0xffffffffbf40001,  0xffffffffbdc0001,  0xffffffffb880001,  0xffffffffaec0001,
+            # 0xffffffffa380001,  0xffffffffa200001,  0xffffffffa0c0001,  0xffffffff9600001,
+            # 0xffffffff91c0001,  0xffffffff8f40001,  0xffffffff8680001,  0xffffffff7e40001,
+            # 0xffffffff7bc0001,  0xffffffff76c0001,  0xffffffff7680001,  0xffffffff6fc0001,
+            # 0xffffffff6880001,  0xffffffff6340001,  0xffffffff5d40001,  0xffffffff54c0001,
+            # 0xffffffff4d40001,  0xffffffff4380001,  0xffffffff3e80001,  0xffffffff37c0001,
+            # 0xffffffff36c0001,  0xffffffff2100001,  0xffffffff1d80001,  0xffffffff1cc0001,
+            # 0xffffffff1900001,  0xffffffff1740001,  0xffffffff15c0001,  0xffffffff0e80001,
+            # 0xfffffffeff80001,  0xfffffffeff40001,  0xfffffffeefc0001,  0xfffffffee8c0001,
+            # 0xfffffffede40001,  0xfffffffedcc0001,  0xfffffffed040001,  0xfffffffecf40001,
+            # 0xfffffffecec0001,  0xfffffffecb00001,  0xfffffffec380001,  0xfffffffebb40001
+              ]
+        coeff_modulus = [seal.SmallModulus(p) for p in primes]
+        # coeff_modulus = seal.coeff_modulus_128(4*2048)
+        for coeff in coeff_modulus:
+            print(coeff.value())
+        # print(coeff_modulus.value())
+        self.params.set_coeff_modulus(coeff_modulus)
+        self.params.set_plain_modulus(1 << 32)
 
         self.context = SEALContext(self.params)
         self.print_parameters(self.context)
