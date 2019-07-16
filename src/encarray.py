@@ -1,18 +1,18 @@
-from src.fractions_utils import FractionalEncoderUtils, FracContext, FractionalDecoderUtils
+from src.fractions_utils import FractionalEncoderUtils, FracContext, FractionalDecryptorUtils
 import numpy as np
 from copy import deepcopy
 from seal import Ciphertext, Plaintext
 from typing import List
-import sys
+
 
 class EncArray:
     def __init__(self, arr, enc_utils: FractionalEncoderUtils = None, dtype=Ciphertext):
         """
-        Class representing encrypted array of encrypted fractional numbers.
+        Class representing array of encrypted or encoded fractional numbers.
         Support of basic operations applied to an various dimension array.
-        :param arr: encrypted or unencrypted array of floats
-        :param enc_utils (FractionalEncoderUtils): Fractional utils class providing
-        :param is_encrypted: flag to determine encrypted arr or not
+        :param arr: encrypted/unencrypted or encoded/unencoded array of floats
+        :param enc_utils (FractionalEncoderUtils): Fractional utils class providing basic operations on cyphertext
+        :param dtype: type of data in array (Plaintext or Ciphertext)
 
         Examples:
         >> context = FracContext()
@@ -39,8 +39,6 @@ class EncArray:
     @staticmethod
     def _recur_apply(arr1: List, arr2: List = None, fun=None, result=None):
         if result is None:  # First level of recurrence
-            arr1 = deepcopy(arr1)
-            arr2 = deepcopy(arr2)
             result = deepcopy(arr1)
 
         if type(arr1) != list:
@@ -55,79 +53,80 @@ class EncArray:
 
     def __mul__(self, o):
         """
-        Element-wise multiplication of 2 encrypted array
+        Element-wise multiplication of 2 encrypted arrays or encrypted and encoded array
         :param o: encrypted array to multiply
         :return: encrypted result
         Example:
         a * b
         """
-        if not self._is_dim_equal(o):
+        if not self._is_shape_equal(o):
             return None
         if self.dtype == Ciphertext and o.dtype == Ciphertext:
-            return EncArray(self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.multiply), enc_utils=self.enc_utils)
+            result = self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.multiply)
+            # result = self._recur_apply(result, fun=self.enc_utils.relinearize)
         elif self.dtype == Ciphertext and o.dtype == Plaintext:
-            return EncArray(self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.multiply_plain), enc_utils=self.enc_utils)
+            result = self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.multiply_plain)
         elif self.dtype == Plaintext and o.dtype == Ciphertext:
-            return EncArray(self._recur_apply(o.enc_arr, self.enc_arr, fun=self.enc_utils.multiply_plain), enc_utils=self.enc_utils)
+            result = self._recur_apply(o.enc_arr, self.enc_arr, fun=self.enc_utils.multiply_plain)
         else:
             print('Not supported opperation')
-            return None
+            result = None
+        return EncArray(result, enc_utils=self.enc_utils)
 
     def __add__(self, o):
         """
+        Element-wise sum of 2 encrypted arrays or encrypted and encoded array.
         :param o: encrypted array to add
         :return: encrypted result
-        Addition of encrypted arrays
+        Addition of encrypted arrays.
         Example:
         a + b
         """
-        if not self._is_dim_equal(o):
+        if not self._is_shape_equal(o):
             return None
         if self.dtype == Ciphertext and o.dtype == Ciphertext:
             result = self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.add)
-            result = self._recur_apply(result, fun=self.enc_utils.relinearize)
-            return EncArray(result, enc_utils=self.enc_utils)
+
         elif self.dtype == Ciphertext and o.dtype == Plaintext:
-            return EncArray(self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.add_plain),
-                            enc_utils=self.enc_utils)
+            result = self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.add_plain)
         elif self.dtype == Plaintext and o.dtype == Ciphertext:
-            return EncArray(self._recur_apply(o.enc_arr, self.enc_arr, fun=self.enc_utils.add_plain),
-                            enc_utils=self.enc_utils)
+            result = self._recur_apply(o.enc_arr, self.enc_arr, fun=self.enc_utils.add_plain)
         else:
             print('Not supported opperation')
-            return None
+            result = None
+        return EncArray(result, enc_utils=self.enc_utils)
 
     def __sub__(self, o):
         """
-        Substraction of array from array
+        Substraction of encrypted array from encrypted array
         :param o: Encrypted array to substract
         :return: encrypted result
         Example:
         a - b
         """
-        if not self._is_dim_equal(o):
+        if not self._is_shape_equal(o):
             return None
         return EncArray(self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.subtract), enc_utils=self.enc_utils)
 
-    def _is_dim_equal(self, o):
+    def _is_shape_equal(self, o):
         if np.array_equal(self.shape, o.shape):
             return True
         print("Dimensions are not equal!")
         return False
 
-    def decrypt_array(self, decode_utils: FractionalDecoderUtils):
+    def decrypt_array(self, decode_utils: FractionalDecryptorUtils):
         """
         Decrypts current array object
         :param decode_utils: Decoder class initiliazed with the same context as encoder
         :returns: decrypted array
 
         Example:
-        >> decode_utils = FractionalDecoderUtils(context)
+        >> decode_utils = FractionalDecryptorUtils(context)
         >> a.decrypt_array(decode_utils)
         """
-        return self._recur_apply(self.enc_arr, fun=decode_utils.decode)
+        return self._recur_apply(self.enc_arr, fun=decode_utils.decrypt)
 
-    def noise_budget(self, decode_utils: FractionalDecoderUtils):
+    def noise_budget(self, decode_utils: FractionalDecryptorUtils):
         """
         Compute noise budget consumption for each encrypted number in an array
         :return: left amount of budget in bits for every element in array
@@ -146,6 +145,9 @@ class EncArray:
 
     @property
     def T(self):
+        """
+        Transposed array
+        """
         if self.ndim != 1:
             return EncArray(list(map(list, zip(*self.enc_arr))), enc_utils=self.enc_utils)
         else:
@@ -159,7 +161,7 @@ class EncArray:
 
     def __matmul__(self, other):
         """
-        Matrix multiplication
+        Matrix multiplication of 2 encrypted arrays
         :param other: array to multiply
         :return: encrypted result
         Example:
@@ -180,5 +182,9 @@ class EncArray:
         return EncArray(result, enc_utils=self.enc_utils)
 
     def mem_size(self) -> int:
+        """
+        Sum of all ciphertexts' sizes in array. Note, that the size of freshly ecrypted plaintext always equals to 2.
+        :return: Overall size of array
+        """
         sizes = np.array(self._recur_apply(self.enc_arr, fun=lambda num: num.size()))
         return sizes.sum()

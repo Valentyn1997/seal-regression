@@ -1,37 +1,40 @@
 import seal
-from seal import EvaluationKeys, Ciphertext, Decryptor, Encryptor, EncryptionParameters, Evaluator, FractionalEncoder, KeyGenerator, Plaintext, SEALContext
+from seal import EvaluationKeys, Ciphertext, Decryptor, Encryptor, EncryptionParameters, Evaluator, FractionalEncoder, \
+    KeyGenerator, Plaintext, SEALContext
 from typing import List
+from copy import deepcopy
+
 
 class FracContext:
-    def __init__(self):
+    primes = [
+        0xffffffffffc0001, 0xfffffffff840001, 0xfffffffff240001, 0xffffffffe7c0001,
+        0xffffffffe740001, 0xffffffffe4c0001, 0xffffffffe440001, 0xffffffffe400001,
+        0xffffffffdbc0001, 0xffffffffd840001, 0xffffffffd680001, 0xffffffffd000001,
+        0xffffffffcf00001, 0xffffffffcdc0001, 0xffffffffcc40001, 0xffffffffc300001,
+        0xffffffffbf40001, 0xffffffffbdc0001, 0xffffffffb880001, 0xffffffffaec0001,
+        0xffffffffa380001, 0xffffffffa200001, 0xffffffffa0c0001, 0xffffffff9600001,
+        0xffffffff91c0001, 0xffffffff8f40001, 0xffffffff8680001, 0xffffffff7e40001,
+        0xffffffff7bc0001, 0xffffffff76c0001, 0xffffffff7680001, 0xffffffff6fc0001,
+        0xffffffff6880001, 0xffffffff6340001, 0xffffffff5d40001, 0xffffffff54c0001,
+        0xffffffff4d40001, 0xffffffff4380001, 0xffffffff3e80001, 0xffffffff37c0001,
+        0xffffffff36c0001, 0xffffffff2100001, 0xffffffff1d80001, 0xffffffff1cc0001,
+        0xffffffff1900001,  0xffffffff1740001,  0xffffffff15c0001,  0xffffffff0e80001,
+        0xfffffffeff80001,  0xfffffffeff40001,  0xfffffffeefc0001,  0xfffffffee8c0001,
+        0xfffffffede40001,  0xfffffffedcc0001,  0xfffffffed040001,  0xfffffffecf40001,
+        0xfffffffecec0001,  0xfffffffecb00001,  0xfffffffec380001,  0xfffffffebb40001
+    ]
+
+    def __init__(self, poly_modulus="1x^1024 + 1", coef_modulus_n_primes=20, plain_modulus=1 << 32):
         """
         Set up encryption context for encoder and decoder
+        :param poly_modulus:
+        :param coef_modulus_n_primes:
+        :param plain_modulus:
         """
         self.params = EncryptionParameters()
-        self.params.set_poly_modulus("1x^1024 + 1")
-        primes = [
-            0xffffffffffc0001,  0xfffffffff840001,  0xfffffffff240001,  0xffffffffe7c0001,
-            0xffffffffe740001,  0xffffffffe4c0001,  0xffffffffe440001,  0xffffffffe400001,
-            0xffffffffdbc0001,  0xffffffffd840001,  0xffffffffd680001,  0xffffffffd000001,
-            0xffffffffcf00001,  0xffffffffcdc0001,  0xffffffffcc40001,  0xffffffffc300001,
-            0xffffffffbf40001,  0xffffffffbdc0001,  0xffffffffb880001,  0xffffffffaec0001,
-            0xffffffffa380001,  0xffffffffa200001,  0xffffffffa0c0001,  0xffffffff9600001,
-            0xffffffff91c0001,  0xffffffff8f40001,  0xffffffff8680001,  0xffffffff7e40001,
-            0xffffffff7bc0001,  0xffffffff76c0001,  0xffffffff7680001,  0xffffffff6fc0001,
-            0xffffffff6880001,  0xffffffff6340001,  0xffffffff5d40001,  0xffffffff54c0001,
-            0xffffffff4d40001,  0xffffffff4380001,  0xffffffff3e80001,  0xffffffff37c0001,
-            0xffffffff36c0001,  0xffffffff2100001,  0xffffffff1d80001,  0xffffffff1cc0001,
-            # 0xffffffff1900001,  0xffffffff1740001,  0xffffffff15c0001,  0xffffffff0e80001,
-            # 0xfffffffeff80001,  0xfffffffeff40001,  0xfffffffeefc0001,  0xfffffffee8c0001,
-            # 0xfffffffede40001,  0xfffffffedcc0001,  0xfffffffed040001,  0xfffffffecf40001,
-            # 0xfffffffecec0001,  0xfffffffecb00001,  0xfffffffec380001,  0xfffffffebb40001
-              ]
-        coeff_modulus = [seal.SmallModulus(p) for p in primes]
-        # coeff_modulus = seal.coeff_modulus_128(16*2048)
-
-        # print(coeff_modulus.value())
-        self.params.set_coeff_modulus(coeff_modulus)
-        self.params.set_plain_modulus(1 << 32)
+        self.params.set_poly_modulus(poly_modulus)
+        self.params.set_coeff_modulus([seal.SmallModulus(p) for p in FracContext.primes[:coef_modulus_n_primes]])
+        self.params.set_plain_modulus(plain_modulus)
 
         self.context = SEALContext(self.params)
         self.print_parameters(self.context)
@@ -41,7 +44,11 @@ class FracContext:
         self.secret_key = self.keygen.secret_key()
         self.evaluator = Evaluator(self.context)
 
-    def print_parameters(self, context):
+    def print_parameters(self, context: SEALContext):
+        """
+        Parameters description
+        :param context: SEALContext object
+        """
         print("/ Encryption parameters:")
         print("| poly_modulus: " + context.poly_modulus().to_string())
 
@@ -52,8 +59,12 @@ class FracContext:
         print("| noise_standard_deviation: " + (str)(context.noise_standard_deviation()))
 
 
-class FractionalDecoderUtils:
+class FractionalDecryptorUtils:
     def __init__(self, context):
+        """
+        Class providing decryption operation
+        :param context: Context initialising HE parameters
+        """
         self.context = context.context
         self.secret_key = context.secret_key
         self.decryptor = Decryptor(self.context, self.secret_key)
@@ -62,7 +73,7 @@ class FractionalDecoderUtils:
                                          64, 32, 3)
         self.evaluator = context.evaluator
 
-    def decode(self, encrypted_res):
+    def decrypt(self, encrypted_res):
         plain_result = Plaintext()
         self.decryptor.decrypt(encrypted_res, plain_result)
         result = self.encoder.decode(plain_result)
@@ -71,6 +82,11 @@ class FractionalDecoderUtils:
 
 class FractionalEncoderUtils:
     def __init__(self, context: FracContext):
+        """
+        Class providing encoding and encryption operations, operations over
+        encrypted data
+        :param context: Context initialising HE parameters
+        """
         self.context = context.context
         self.public_key = context.public_key
         self.encryptor = Encryptor(self.context, self.public_key)
@@ -79,7 +95,7 @@ class FractionalEncoderUtils:
                                          64, 32, 3)
         self.evaluator = context.evaluator
         self.ev_keys = EvaluationKeys()
-        context.keygen.generate_evaluation_keys(seal.dbc_max(), self.ev_keys )
+        context.keygen.generate_evaluation_keys(seal.dbc_max(), self.ev_keys)
 
     def encode_rationals(self, numbers) -> List[Plaintext]:
         # encoding without encryption
@@ -89,7 +105,7 @@ class FractionalEncoderUtils:
         return encoded_coefficients
 
     def encode_num(self, num) -> Plaintext:
-        if type(num) == Plaintext:
+        if type(num) == Plaintext or num is None:
             return num
         else:  # encoding without encryption
             return self.encoder.encode(num)
@@ -133,13 +149,14 @@ class FractionalEncoderUtils:
         :param b: encrypted fractional value
         :return: substracted result
         """
+        a = deepcopy(a)
         minus_sign = self.encoder.encode(-1)
         self.evaluator.multiply_plain(b, minus_sign)
         self.evaluator.add(a, b)
         return a
 
     def encrypt_num(self, value) -> Ciphertext:
-        if type(value) == Ciphertext:
+        if type(value) == Ciphertext or value is None:
             return value
         else:
             encrypted = Ciphertext()
@@ -156,6 +173,7 @@ class FractionalEncoderUtils:
         :param b: encrypted fractional value
         :return: encrypted sum of a and b
         """
+        a = deepcopy(a)
         self.evaluator.add(a, b)
         return a
 
@@ -165,6 +183,7 @@ class FractionalEncoderUtils:
         :param b: encoded fractional value
         :return: encrypted sum of a and b
         """
+        a = deepcopy(a)
         self.evaluator.add_plain(a, b)
         return a
 
@@ -174,6 +193,7 @@ class FractionalEncoderUtils:
         :param b: encrypted fractional value
         :return: encrypted product of a and b
         """
+        a = deepcopy(a)
         self.evaluator.multiply(a, b)
         return a
 
@@ -183,8 +203,15 @@ class FractionalEncoderUtils:
         :param b: encrypted fractional value
         :return: encrypted product of a and b
         """
+        a = deepcopy(a)
         self.evaluator.multiply_plain(a, b)
         return a
 
-    def relinearize(self, a: Ciphertext):
+    def relinearize(self, a: Ciphertext) -> Ciphertext:
+        """
+        :param a: encrypted fractional value, supposedly result of multiplication
+        :return: relinearized a
+        """
+        a = deepcopy(a)
         self.evaluator.relinearize(a, self.ev_keys)
+        return a
