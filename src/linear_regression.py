@@ -2,6 +2,7 @@ from src.arma import ARMA
 from src.encarray import EncArray
 from src.fractions_utils import FractionalEncoderUtils, FracContext, FractionalDecoderUtils
 import numpy as np
+from seal import Plaintext
 
 class Linear_Regression:
     def __init__(self, decoder_utils, encode_utils: FractionalEncoderUtils, lr=0.2, n_iter=100):
@@ -42,7 +43,7 @@ class Linear_Regression:
 
         # Learning weight divided by sample size
         if type(self.coef) != EncArray:
-            self.coef = EncArray(X.shape[1] * [self.lr / X.shape[0]], enc_utils=self.encode_utils)
+            self.coef = EncArray(X.shape[1] * [self.lr / X.shape[0]], enc_utils=self.encode_utils, dtype=Plaintext)
 
         # Gradient descent
         for it in (range(self.n_iter)):
@@ -51,14 +52,16 @@ class Linear_Regression:
                 loss = []
                 for i in range(X.shape[0]):
                     loss.append(((self.weigths * X[i]).sum() - y[i][0]).enc_arr)
-                loss = EncArray(loss, enc_utils=self.encode_utils, is_encrypted=True)
+                loss = EncArray(loss, enc_utils=self.encode_utils)
                 gradient.append((loss * X.T[j]).sum().enc_arr)
-            gradient = EncArray(gradient, enc_utils=self.encode_utils, is_encrypted=True)
-            print(f'Iteration: {it}. Gradient: {gradient.decrypt_array(decode_utils)}. Noise budget: {self.weigths.noise_budget(decode_utils)}')
+            gradient = EncArray(gradient, enc_utils=self.encode_utils)
+            print(f'Iteration: {it}. Gradient: {gradient.decrypt_array(decode_utils)}. '
+                  f'Noise budget: {self.weigths.noise_budget(decode_utils)}. '
+                  f'Size of weights: {self.weigths.mem_size()} bytes')
             self.weigths = self.weigths - self.coef * gradient
 
     def predict(self, X: EncArray) -> EncArray:
-        weights_extended = EncArray([self.weigths.enc_arr], encode_utils, is_encrypted=True)
+        weights_extended = EncArray([self.weigths.enc_arr], self.encode_utils)
         return X @ weights_extended
 
 

@@ -17,4 +17,4 @@ class ARMA:
         X.append(intercept)
         for shift in range(1, lag+1):
             X.append(ts.T[0].enc_arr[lag-shift:len(ts) - shift])
-        return EncArray(X, enc_utils=ts.enc_utils, is_encrypted=True).T, ts[lag:]
+        return EncArray(X, enc_utils=ts.enc_utils).T, ts[lag:]

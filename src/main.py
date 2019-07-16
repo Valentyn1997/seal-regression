@@ -22,7 +22,7 @@ def main():
 
     a = futils.encrypt_num(5)
     b = futils.encrypt_num(3)
-    res = futils.substract(a, b)
+    res = futils.subtract(a, b)
     print(futils.decode(res))
 
 if __name__ == '__main__':

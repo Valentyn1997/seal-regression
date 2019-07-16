@@ -1,15 +1,17 @@
 from src.fractions_utils import FractionalEncoderUtils, FracContext, FractionalDecoderUtils
 import numpy as np
 from copy import deepcopy
-
+from seal import Ciphertext, Plaintext
+from typing import List
+import sys
 
 class EncArray:
-    def __init__(self, arr, enc_utils: FractionalEncoderUtils = None, is_encrypted=False):
+    def __init__(self, arr, enc_utils: FractionalEncoderUtils = None, dtype=Ciphertext):
         """
         Class representing encrypted array of encrypted fractional numbers.
         Support of basic operations applied to an various dimension array.
         :param arr: encrypted or unencrypted array of floats
-        :param enc_utils: Fractional utils class providing
+        :param enc_utils (FractionalEncoderUtils): Fractional utils class providing
         :param is_encrypted: flag to determine encrypted arr or not
 
         Examples:
@@ -17,22 +19,26 @@ class EncArray:
         >> encode_utils = FractionalEncoderUtils(context)
         >> a = EncArray([12, 13], encode_utils)
         """
+        self.dtype = dtype
         if type(arr) == EncArray:
             self.enc_utils = arr.enc_utils
             self.enc_arr = deepcopy(arr.enc_arr)
         else:
             self.enc_utils = enc_utils
-            if not is_encrypted:
+            if dtype == Ciphertext:
                 self.enc_arr = self._recur_apply(arr, fun=self.enc_utils.encrypt_num)
+            elif dtype == Plaintext:
+                self.enc_arr = self._recur_apply(arr, fun=self.enc_utils.encode_num)
             else:
-                self.enc_arr = deepcopy(arr)
+                self.enc_arr = None
+                print('Unknown data type!')
 
         self.shape = np.shape(self.enc_arr)
         self.ndim = len(self.shape)
 
     @staticmethod
-    def _recur_apply(arr1, arr2=None, fun=None, result=None):
-        if result is None:
+    def _recur_apply(arr1: List, arr2: List = None, fun=None, result=None):
+        if result is None:  # First level of recurrence
             arr1 = deepcopy(arr1)
             arr2 = deepcopy(arr2)
             result = deepcopy(arr1)
@@ -57,8 +63,15 @@ class EncArray:
         """
         if not self._is_dim_equal(o):
             return None
-        return EncArray(self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.multiply),
-                        enc_utils=self.enc_utils, is_encrypted=True)
+        if self.dtype == Ciphertext and o.dtype == Ciphertext:
+            return EncArray(self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.multiply), enc_utils=self.enc_utils)
+        elif self.dtype == Ciphertext and o.dtype == Plaintext:
+            return EncArray(self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.multiply_plain), enc_utils=self.enc_utils)
+        elif self.dtype == Plaintext and o.dtype == Ciphertext:
+            return EncArray(self._recur_apply(o.enc_arr, self.enc_arr, fun=self.enc_utils.multiply_plain), enc_utils=self.enc_utils)
+        else:
+            print('Not supported opperation')
+            return None
 
     def __add__(self, o):
         """
@@ -70,8 +83,19 @@ class EncArray:
         """
         if not self._is_dim_equal(o):
             return None
-        return EncArray(self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.add),
-                        enc_utils=self.enc_utils, is_encrypted=True)
+        if self.dtype == Ciphertext and o.dtype == Ciphertext:
+            result = self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.add)
+            result = self._recur_apply(result, fun=self.enc_utils.relinearize)
+            return EncArray(result, enc_utils=self.enc_utils)
+        elif self.dtype == Ciphertext and o.dtype == Plaintext:
+            return EncArray(self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.add_plain),
+                            enc_utils=self.enc_utils)
+        elif self.dtype == Plaintext and o.dtype == Ciphertext:
+            return EncArray(self._recur_apply(o.enc_arr, self.enc_arr, fun=self.enc_utils.add_plain),
+                            enc_utils=self.enc_utils)
+        else:
+            print('Not supported opperation')
+            return None
 
     def __sub__(self, o):
         """
@@ -83,8 +107,7 @@ class EncArray:
         """
         if not self._is_dim_equal(o):
             return None
-        return EncArray(self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.substract),
-                        enc_utils=self.enc_utils, is_encrypted=True)
+        return EncArray(self._recur_apply(self.enc_arr, o.enc_arr, fun=self.enc_utils.subtract), enc_utils=self.enc_utils)
 
     def _is_dim_equal(self, o):
         if np.array_equal(self.shape, o.shape):
@@ -119,12 +142,12 @@ class EncArray:
         Sums of elements of 1D array
         :returns encrypted sum
         """
-        return EncArray(self.enc_utils.sum_enc_array(self.enc_arr), enc_utils=self.enc_utils, is_encrypted=True)
+        return EncArray(self.enc_utils.sum_enc_array(self.enc_arr), enc_utils=self.enc_utils)
 
     @property
     def T(self):
         if self.ndim != 1:
-            return EncArray(list(map(list, zip(*self.enc_arr))), enc_utils=self.enc_utils, is_encrypted=True)
+            return EncArray(list(map(list, zip(*self.enc_arr))), enc_utils=self.enc_utils)
         else:
             return self
 
@@ -132,7 +155,7 @@ class EncArray:
         """
         Access array elements by index
         """
-        return EncArray(self.enc_arr[item], enc_utils=self.enc_utils, is_encrypted=True)
+        return EncArray(self.enc_arr[item], enc_utils=self.enc_utils)
 
     def __matmul__(self, other):
         """
@@ -147,11 +170,15 @@ class EncArray:
 
         result = [
             [
-                EncArray([(EncArray(ele_a, enc_utils=self.enc_utils, is_encrypted=True) * EncArray(ele_b, enc_utils=self.enc_utils, is_encrypted=True)).enc_arr
-                           for ele_a, ele_b in zip(row_a, col_b)], enc_utils=self.enc_utils, is_encrypted=True)
+                EncArray([(EncArray(ele_a, enc_utils=self.enc_utils) * EncArray(ele_b, enc_utils=self.enc_utils)).enc_arr
+                           for ele_a, ele_b in zip(row_a, col_b)], enc_utils=self.enc_utils)
                     .sum()
                     .enc_arr
                 for col_b in b]
             for row_a in a
         ]
-        return EncArray(result, enc_utils=self.enc_utils, is_encrypted=True)
+        return EncArray(result, enc_utils=self.enc_utils)
+
+    def mem_size(self) -> int:
+        sizes = np.array(self._recur_apply(self.enc_arr, fun=lambda num: num.size()))
+        return sizes.sum()

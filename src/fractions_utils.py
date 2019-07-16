@@ -1,6 +1,6 @@
 import seal
 from seal import EvaluationKeys, Ciphertext, Decryptor, Encryptor, EncryptionParameters, Evaluator, FractionalEncoder, KeyGenerator, Plaintext, SEALContext
-
+from typing import List
 
 class FracContext:
     def __init__(self):
@@ -21,10 +21,10 @@ class FracContext:
             0xffffffff6880001,  0xffffffff6340001,  0xffffffff5d40001,  0xffffffff54c0001,
             0xffffffff4d40001,  0xffffffff4380001,  0xffffffff3e80001,  0xffffffff37c0001,
             0xffffffff36c0001,  0xffffffff2100001,  0xffffffff1d80001,  0xffffffff1cc0001,
-            0xffffffff1900001,  0xffffffff1740001,  0xffffffff15c0001,  0xffffffff0e80001,
-            0xfffffffeff80001,  0xfffffffeff40001,  0xfffffffeefc0001,  0xfffffffee8c0001,
-            0xfffffffede40001,  0xfffffffedcc0001,  0xfffffffed040001,  0xfffffffecf40001,
-            0xfffffffecec0001,  0xfffffffecb00001,  0xfffffffec380001,  0xfffffffebb40001
+            # 0xffffffff1900001,  0xffffffff1740001,  0xffffffff15c0001,  0xffffffff0e80001,
+            # 0xfffffffeff80001,  0xfffffffeff40001,  0xfffffffeefc0001,  0xfffffffee8c0001,
+            # 0xfffffffede40001,  0xfffffffedcc0001,  0xfffffffed040001,  0xfffffffecf40001,
+            # 0xfffffffecec0001,  0xfffffffecb00001,  0xfffffffec380001,  0xfffffffebb40001
               ]
         coeff_modulus = [seal.SmallModulus(p) for p in primes]
         # coeff_modulus = seal.coeff_modulus_128(16*2048)
@@ -81,24 +81,26 @@ class FractionalEncoderUtils:
         self.ev_keys = EvaluationKeys()
         context.keygen.generate_evaluation_keys(seal.dbc_max(), self.ev_keys )
 
-    def encode_rationals(self, numbers):
+    def encode_rationals(self, numbers) -> List[Plaintext]:
         # encoding without encryption
         encoded_coefficients = []
         for i in range(len(numbers)):
             encoded_coefficients.append(self.encoder.encode(numbers[i]))
         return encoded_coefficients
 
-    def encode_num(self, num):
-        # encoding without encryption
-        return self.encoder.encode(num)
+    def encode_num(self, num) -> Plaintext:
+        if type(num) == Plaintext:
+            return num
+        else:  # encoding without encryption
+            return self.encoder.encode(num)
 
-    def sum_enc_array(self, array):
+    def sum_enc_array(self, array: List[Ciphertext]) -> Ciphertext:
         # can applied for 1D array only
         encrypted_result = Ciphertext()
         self.evaluator.add_many(array, encrypted_result)
         return encrypted_result
 
-    def encrypt_rationals(self, rational_numbers):
+    def encrypt_rationals(self, rational_numbers: List) -> List[Ciphertext]:
         """
         :param rational_numbers: array of rational numbers
         :return: encrypted result
@@ -109,7 +111,7 @@ class FractionalEncoderUtils:
             self.encryptor.encrypt(self.encoder.encode(rational_numbers[i]), encrypted_rationals[i])
         return encrypted_rationals
 
-    def weighted_average(self, encrypted_rationals, encoded_coefficients, encoded_divide_by):
+    def weighted_average(self, encrypted_rationals, encoded_coefficients, encoded_divide_by) -> Ciphertext:
         """
         Weighted average, where weights encoded, not encrypted numbers
         :param encoded_divide_by: fixed point fractional, e.g 0.1 to perform division by 10
@@ -124,7 +126,7 @@ class FractionalEncoderUtils:
 
         return encrypted_result
 
-    def substract(self, a, b):
+    def subtract(self, a: Ciphertext, b: Ciphertext) -> Ciphertext:
         """
         Substruction operation of 2 fractional numbers
         :param a: encrypted fractional value
@@ -136,21 +138,53 @@ class FractionalEncoderUtils:
         self.evaluator.add(a, b)
         return a
 
-    def encrypt_num(self, value):
-        plain = self.encoder.encode(value)
-        encrypted = Ciphertext()
-        self.encryptor.encrypt(plain, encrypted)
-        return encrypted
+    def encrypt_num(self, value) -> Ciphertext:
+        if type(value) == Ciphertext:
+            return value
+        else:
+            encrypted = Ciphertext()
+            if type(value) == Plaintext:
+                self.encryptor.encrypt(value, encrypted)
+            else:
+                plain = self.encoder.encode(value)
+                self.encryptor.encrypt(plain, encrypted)
+            return encrypted
 
-    def add(self, a, b):
+    def add(self, a: Ciphertext, b: Ciphertext) -> Ciphertext:
         """
         :param a: encrypted fractional value
         :param b: encrypted fractional value
-        :return: encrypted sum
+        :return: encrypted sum of a and b
         """
         self.evaluator.add(a, b)
         return a
 
-    def multiply(self, a, b):
+    def add_plain(self, a: Ciphertext, b: Plaintext) -> Ciphertext:
+        """
+        :param a: encrypted fractional value
+        :param b: encoded fractional value
+        :return: encrypted sum of a and b
+        """
+        self.evaluator.add_plain(a, b)
+        return a
+
+    def multiply(self, a: Ciphertext, b: Ciphertext) -> Ciphertext:
+        """
+        :param a: encrypted fractional value
+        :param b: encrypted fractional value
+        :return: encrypted product of a and b
+        """
         self.evaluator.multiply(a, b)
         return a
+
+    def multiply_plain(self, a: Ciphertext, b: Plaintext) -> Ciphertext:
+        """
+        :param a: encrypted fractional value
+        :param b: encrypted fractional value
+        :return: encrypted product of a and b
+        """
+        self.evaluator.multiply_plain(a, b)
+        return a
+
+    def relinearize(self, a: Ciphertext):
+        self.evaluator.relinearize(a, self.ev_keys)
