@@ -1,29 +1,49 @@
-from src.fractions_utils import Fractionals_utils
+from src.fractions_utils import FracContext, FractionalEncoderUtils, FractionalDecryptorUtils
+from src.encarray import EncArray
+from src.linear_regression import SecureLinearRegression
+
+from sklearn.datasets import make_regression
+import numpy as np
+
+
+def generate_dataset(n_samples, n_features, noise, add_intercept=True):
+    X, y = make_regression(n_samples=n_samples, n_features=n_features, noise=noise)
+    X = (X - np.mean(X, axis=0)) / np.std(X, axis=0)
+    if add_intercept:
+        X = np.hstack((X, np.ones((X.shape[0], 1))))
+    y = (y - np.mean(y)) / np.std(y)
+    y = y.reshape(-1, 1)
+    return X, y
+
 
 def main():
-    futils = Fractionals_utils()
+    context = FracContext(poly_modulus="1x^1024 + 1", coef_modulus_n_primes=20, plain_modulus=1 << 32)
+    encode_utils = FractionalEncoderUtils(context)
+    decode_utils = FractionalDecryptorUtils(context)
 
-    coefficients = [0.1, 0.05, 0.05, 0.2, 0.05, 0.3, 0.1, 0.025, 0.075, 0.05]
-    rational_numbers = [3.1, 4.159, 2.65, 3.5897, 9.3, 2.3, 8.46, 2.64, 3.383, 2.795]
+    X, y = generate_dataset(7, 1, 15)
+    X_enc, y_enc = EncArray(X.tolist(), enc_utils=encode_utils), EncArray(y.tolist(), enc_utils=encode_utils)
+    print(f'X shape: {X.shape}, y shape: {y.shape}')
 
-    encrypted_rationals = futils.encrypt_rationals(rational_numbers)
-    encoded_coefficients = futils.encode_rationals(coefficients)
-    divide_by = futils.encode_num(1 / len(rational_numbers))
+    print(f'=========== Simple unencrypted LR ===========')
+    model = SecureLinearRegression()
+    model.fit_unencrypted(X, y, n_iter=25, verbose=True)
+    print(f'Estimated parameters: {model.weigths}')
 
-    avg = futils.weighted_average(encrypted_rationals, encoded_coefficients, divide_by)
+    print(f'================= Secure LR ==================')
+    n_runs = 5
+    init_weights = None
+    for run in range(n_runs):
+        print(f'RUN {run+1}/{n_runs}: ')
+        model.fit(X_enc, y_enc, decode_utils, init_weights, n_iter=7, verbose=True)
 
-    print(futils.decode(avg))
+        weights = model.weigths.decrypt_array(decode_utils)
+        print(f'Estimated parameters: {weights}')
+        print(f'Prediction: {model.predict(X_enc).decrypt_array(decode_utils)}. Real values: {y.T}')
 
-    numbers = [3, 4.159, 2.65, 2, -9.3]
+        # Reencprypting weights
+        init_weights = EncArray(weights, enc_utils=encode_utils)
 
-    enc_all_nums = futils.encrypt_rationals(numbers)
-    enc_sum1 = futils.sum_enc_array(enc_all_nums)
-    print(futils.decode(enc_sum1))
-
-    a = futils.encrypt_num(5)
-    b = futils.encrypt_num(3)
-    res = futils.substract(a, b)
-    print(futils.decode(res))
 
 if __name__ == '__main__':
     main()
