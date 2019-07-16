@@ -1,5 +1,5 @@
-from src.encarray import EncArray
-from src.fractions_utils import FractionalEncoderUtils, FracContext, FractionalDecryptorUtils
+from seal_regression.encarray import EncArray
+from seal_regression.fractions_utils import FractionalEncoderUtils, FracContext, FractionalDecryptorUtils
 import numpy as np
 from seal import Plaintext
 
@@ -10,7 +10,7 @@ class SecureLinearRegression:
         Linear regression, working with encrypted arrays of fractional numbers.
 
         Examples:
-        >> from src.fractions_utils import FractionalEncoderUtils, FracContext, FractionalDecryptorUtils
+        >> from seal_regression.fractions_utils import FractionalEncoderUtils, FracContext, FractionalDecryptorUtils
         >> context = FracContext()
         >> encode_utils = FractionalEncoderUtils(context)
         >> decode_utils = FractionalDecryptorUtils(context)

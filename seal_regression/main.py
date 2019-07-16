@@ -1,6 +1,6 @@
-from src.fractions_utils import FracContext, FractionalEncoderUtils, FractionalDecryptorUtils
-from src.encarray import EncArray
-from src.linear_regression import SecureLinearRegression
+from seal_regression.fractions_utils import FracContext, FractionalEncoderUtils, FractionalDecryptorUtils
+from seal_regression.encarray import EncArray
+from seal_regression.linear_regression import SecureLinearRegression
 
 from sklearn.datasets import make_regression
 import numpy as np
