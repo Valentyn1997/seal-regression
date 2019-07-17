@@ -19,4 +19,4 @@ install_pyseal.sh
 
 The basic example of library usage could be found in: [main.py](seal_regression/main.py).
 
-The perfromance evaluation is in:  
+The perfromance evaluation is in: [perfromance_results.ipynb](https://github.com/Valentyn1997/seal_regression/blob/master/notebooks/perfromance_results.ipynb).
