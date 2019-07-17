@@ -9,7 +9,7 @@ setup(
     name='seal_regression',
     version='0.0',
     author='Valentyn Melnychuk, Diana Devletshyna',
-    author_email='v.melnychuk@campus.lmu.de, ',
+    author_email='v.melnychuk@campus.lmu.de, d.davletshina@campus.lmu.de',
     description='Implementation of Linear Regression on encrypted data with PySEAL',
     install_requires=reqs,
     packages=['seal_regression'],
