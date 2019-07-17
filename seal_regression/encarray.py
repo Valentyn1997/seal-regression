@@ -1,4 +1,4 @@
-from src.fractions_utils import FractionalEncoderUtils, FracContext, FractionalDecryptorUtils
+from seal_regression.fractions_utils import FractionalEncoderUtils, FracContext, FractionalDecryptorUtils
 import numpy as np
 from copy import deepcopy
 from seal import Ciphertext, Plaintext
