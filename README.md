@@ -15,5 +15,8 @@ One also needs to install [PySEAL Python Library](https://github.com/Lab41/PySEA
 install_pyseal.sh
 ```
 
-### Usage of library
+### Usage examples
 
+The basic example of library usage could be found in: [main.py](seal_regression/main.py).
+
+The perfromance evaluation is in:  
