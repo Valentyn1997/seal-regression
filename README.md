@@ -1,20 +1,19 @@
 # seal_regression
 
-### Setting up Docker image for PySEAL
+The aim of our work is to perform Machine Learning (ML) algorithm, namely Linear Regression, on the ciphertext and evaluate its performance and usability. We use gradient descent in order to find LR coefficient estimates, as this algorithm does not require division.
+
+![secure ML](https://github.com/Valentyn1997/seal_regression/raw/master/secure_ML_scheme.png)
+
+We used [Microsoft SEAL C++ library](https://www.microsoft.com/en-us/research/project/microsoft-seal/) and its Python wrapper - [PySEAL](https://github.com/Lab41/PySEAL). SEAL uses the Fan-Vercauteren homomorphic encryption scheme - Somewhat Fully Homomorphic scheme.
+
+### Installation for Linux/Mac
 ```
-cd PySEAL
-docker build -t seal-save -f Dockerfile .
+pip3 install git+https://github.com/Valentyn1997/seal_regression.git
+```
+One also needs to install [PySEAL Python Library](https://github.com/Lab41/PySEAL). You can run the following script:
+```
+install_pyseal.sh
 ```
 
-### Running Jupyter notebook in Docker image
+### Usage of library
 
-```
-docker run -it -p 8888:8888 seal-save bash
-root@4bb63b8f3776:/SEAL# jupyter notebook --ip 0.0.0.0 --no-browser --allow-root 
-```
-
-### Running python file
-
-```
-docker run -it seal-save python3 example.py
-```
