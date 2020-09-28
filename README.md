@@ -1,4 +1,4 @@
-# seal_regression
+# seal-regression
 
 The aim of our work is to perform Machine Learning (ML) algorithm, namely Linear Regression, on the ciphertext and evaluate its performance and usability. We use gradient descent in order to find LR coefficient estimates, as this algorithm does not require division.
 
